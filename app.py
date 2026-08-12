@@ -17,6 +17,7 @@ from db import (
     check_and_increment_usage,
 )
 from recipe_engine import generate_recipe, extract_features
+from classifier import PreferenceModel, MIN_RATINGS_TO_TRAIN
 
 st.set_page_config(page_title="Palate Agent", page_icon="🍳", layout="centered")
 
@@ -54,6 +55,8 @@ if "current_recipe" not in st.session_state:
     st.session_state.current_recipe = None
 if "current_recipe_id" not in st.session_state:
     st.session_state.current_recipe_id = None
+if "current_features" not in st.session_state:
+    st.session_state.current_features = None
 
 # --- Input form ---
 st.subheader("What do you want to cook?")
@@ -95,6 +98,7 @@ if generate_clicked:
             )
             st.session_state.current_recipe = result
             st.session_state.current_recipe_id = recipe_id
+            st.session_state.current_features = features
         except Exception as e:
             st.error(f"Something went wrong generating the recipe: {e}")
 
@@ -103,6 +107,17 @@ if st.session_state.current_recipe:
     recipe = st.session_state.current_recipe
     st.divider()
     st.subheader(recipe["title"])
+
+    # Show the model's prediction, if it has enough data to make one
+    history = get_all_rated_recipes()
+    model = PreferenceModel()
+    trained = model.fit(history)
+    if trained:
+        predicted = model.predict(st.session_state.current_features)
+        st.info(f"🔮 Predicted rating based on your taste so far: **{predicted:.1f}/5**")
+    else:
+        st.caption(f"Rate {MIN_RATINGS_TO_TRAIN - len(history)} more recipes to start seeing predictions.")
+
     st.markdown(recipe["recipe_text"])
 
     st.divider()
@@ -115,6 +130,7 @@ if st.session_state.current_recipe:
         st.success("Rating saved!")
         st.session_state.current_recipe = None
         st.session_state.current_recipe_id = None
+        st.session_state.current_features = None
         st.rerun()
 
 # --- History ---
