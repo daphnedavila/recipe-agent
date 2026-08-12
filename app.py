@@ -9,7 +9,7 @@ or entered in Streamlit secrets when deployed.
 """
 
 import os
-import uuid
+import re
 import streamlit as st
 
 from db import (
@@ -23,11 +23,7 @@ st.set_page_config(page_title="Palate Agent", page_icon="🍳", layout="centered
 
 init_db()
 
-DAILY_LIMIT_PER_VISITOR = 15  # generations per visitor per day, to protect API credits
-
-# --- Per-visitor session ID for rate limiting (not tied to identity, just this browser session) ---
-if "session_id" not in st.session_state:
-    st.session_state.session_id = str(uuid.uuid4())
+DAILY_LIMIT_PER_VISITOR = 15  # generations per username per day, to protect API credits
 
 # --- API key resolution: local env var first, then Streamlit secrets (for deployment) ---
 def get_api_key():
@@ -49,6 +45,28 @@ if not API_KEY:
         "before running `streamlit run app.py`."
     )
     st.stop()
+
+# --- Username gate: no password, just separates each person's data and predictions ---
+if "username" not in st.session_state:
+    st.session_state.username = None
+
+if not st.session_state.username:
+    st.subheader("Who's cooking?")
+    name_input = st.text_input("Enter a username to get started")
+    if st.button("Continue") and name_input.strip():
+        clean_name = re.sub(r"[^a-zA-Z0-9_-]", "", name_input.strip())[:30]
+        if clean_name:
+            st.session_state.username = clean_name
+            st.rerun()
+        else:
+            st.warning("Please use letters, numbers, - or _ only.")
+    st.stop()
+
+username = st.session_state.username
+st.caption(f"Signed in as **{username}** · [switch user](#)")
+if st.button("Switch user", key="switch_user"):
+    st.session_state.username = None
+    st.rerun()
 
 # --- Session state: holds the current unrated recipe, if any ---
 if "current_recipe" not in st.session_state:
@@ -72,7 +90,7 @@ ingredients = st.text_input("Ingredients on hand (optional)", placeholder="e.g. 
 generate_clicked = st.button("Generate recipe", type="primary")
 
 if generate_clicked:
-    allowed, remaining = check_and_increment_usage(st.session_state.session_id, DAILY_LIMIT_PER_VISITOR)
+    allowed, remaining = check_and_increment_usage(username, DAILY_LIMIT_PER_VISITOR)
     if not allowed:
         st.warning(
             f"You've hit the daily limit of {DAILY_LIMIT_PER_VISITOR} recipe generations. "
@@ -89,6 +107,7 @@ if generate_clicked:
             })
             features = extract_features(API_KEY, result["recipe_text"])
             recipe_id = save_recipe(
+                username=username,
                 title=result["title"],
                 recipe_text=result["recipe_text"],
                 cuisine=cuisine,
@@ -109,7 +128,7 @@ if st.session_state.current_recipe:
     st.subheader(recipe["title"])
 
     # Show the model's prediction, if it has enough data to make one
-    history = get_all_rated_recipes()
+    history = get_all_rated_recipes(username)
     model = PreferenceModel()
     trained = model.fit(history)
     if trained:
@@ -126,7 +145,7 @@ if st.session_state.current_recipe:
     note = st.text_input("Optional note (e.g. 'too spicy', 'loved the texture')")
 
     if st.button("Submit rating"):
-        save_rating(st.session_state.current_recipe_id, rating, note)
+        save_rating(st.session_state.current_recipe_id, username, rating, note)
         st.success("Rating saved!")
         st.session_state.current_recipe = None
         st.session_state.current_recipe_id = None
@@ -136,7 +155,7 @@ if st.session_state.current_recipe:
 # --- History ---
 st.divider()
 with st.expander("Your rating history"):
-    history = get_all_rated_recipes()
+    history = get_all_rated_recipes(username)
     if not history:
         st.write("No ratings yet.")
     else:
@@ -147,5 +166,5 @@ with st.expander("Your rating history"):
                           + (f" _{item['note']}_" if item['note'] else ""))
             with col2:
                 if st.button("Delete", key=f"delete_{item['rating_id']}"):
-                    delete_rating(item['rating_id'])
+                    delete_rating(item['rating_id'], username)
                     st.rerun()
