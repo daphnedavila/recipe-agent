@@ -63,7 +63,7 @@ if not st.session_state.username:
     st.stop()
 
 username = st.session_state.username
-st.caption(f"Signed in as **{username}** · [switch user](#)")
+st.caption(f"Signed in as **{username}**")
 if st.button("Switch user", key="switch_user"):
     st.session_state.username = None
     st.rerun()
