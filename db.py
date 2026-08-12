@@ -4,6 +4,7 @@ Uses SQLite — a single local file, no external server needed.
 """
 
 import sqlite3
+import json
 from datetime import datetime, timezone
 from contextlib import contextmanager
 
@@ -31,6 +32,7 @@ def init_db():
                 cuisine TEXT,
                 time_minutes INTEGER,
                 ingredients_on_hand TEXT,
+                features TEXT,
                 created_at TEXT NOT NULL
             )
         """)
@@ -54,12 +56,13 @@ def init_db():
         """)
 
 
-def save_recipe(title, recipe_text, cuisine, time_minutes, ingredients_on_hand):
+def save_recipe(title, recipe_text, cuisine, time_minutes, ingredients_on_hand, features=None):
     with get_conn() as conn:
         cur = conn.execute(
-            "INSERT INTO recipes (title, recipe_text, cuisine, time_minutes, ingredients_on_hand, created_at) "
-            "VALUES (?, ?, ?, ?, ?, ?)",
+            "INSERT INTO recipes (title, recipe_text, cuisine, time_minutes, ingredients_on_hand, features, created_at) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?)",
             (title, recipe_text, cuisine, time_minutes, ingredients_on_hand,
+             json.dumps(features) if features else None,
              datetime.now(timezone.utc).isoformat()),
         )
         return cur.lastrowid
@@ -102,10 +105,15 @@ def check_and_increment_usage(session_id, daily_limit):
 def get_all_rated_recipes():
     with get_conn() as conn:
         rows = conn.execute("""
-            SELECT r.id, r.title, r.cuisine, r.time_minutes,
+            SELECT r.id, r.title, r.cuisine, r.time_minutes, r.features,
                    rt.rating, rt.note, rt.created_at as rated_at
             FROM recipes r
             JOIN ratings rt ON rt.recipe_id = r.id
             ORDER BY rt.created_at DESC
         """).fetchall()
-        return [dict(row) for row in rows]
+        results = []
+        for row in rows:
+            d = dict(row)
+            d["features"] = json.loads(d["features"]) if d["features"] else {}
+            results.append(d)
+        return results

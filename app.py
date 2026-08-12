@@ -16,7 +16,7 @@ from db import (
     init_db, save_recipe, save_rating, get_all_rated_recipes,
     check_and_increment_usage,
 )
-from recipe_engine import generate_recipe
+from recipe_engine import generate_recipe, extract_features
 
 st.set_page_config(page_title="Palate Agent", page_icon="🍳", layout="centered")
 
@@ -84,12 +84,14 @@ if generate_clicked:
                 "time_minutes": int(time_minutes),
                 "ingredients_on_hand": ingredients or "none specified",
             })
+            features = extract_features(API_KEY, result["recipe_text"])
             recipe_id = save_recipe(
                 title=result["title"],
                 recipe_text=result["recipe_text"],
                 cuisine=cuisine,
                 time_minutes=int(time_minutes),
                 ingredients_on_hand=ingredients,
+                features=features,
             )
             st.session_state.current_recipe = result
             st.session_state.current_recipe_id = recipe_id
