@@ -14,7 +14,7 @@ import streamlit as st
 
 from db import (
     init_db, save_recipe, save_rating, get_all_rated_recipes,
-    check_and_increment_usage,
+    check_and_increment_usage, delete_rating,
 )
 from recipe_engine import generate_recipe, extract_features
 from classifier import PreferenceModel, MIN_RATINGS_TO_TRAIN
@@ -141,5 +141,11 @@ with st.expander("Your rating history"):
         st.write("No ratings yet.")
     else:
         for item in history:
-            st.write(f"**{item['title']}** — {item['rating']}/5"
-                      + (f" _{item['note']}_" if item['note'] else ""))
+            col1, col2 = st.columns([5, 1])
+            with col1:
+                st.write(f"**{item['title']}** — {item['rating']}/5"
+                          + (f" _{item['note']}_" if item['note'] else ""))
+            with col2:
+                if st.button("Delete", key=f"delete_{item['rating_id']}"):
+                    delete_rating(item['rating_id'])
+                    st.rerun()

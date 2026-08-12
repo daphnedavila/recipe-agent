@@ -102,10 +102,16 @@ def check_and_increment_usage(session_id, daily_limit):
         return True, daily_limit - current - 1
 
 
+def delete_rating(rating_id):
+    """Deletes a specific rating. The underlying recipe row stays (harmless), just the rating is removed."""
+    with get_conn() as conn:
+        conn.execute("DELETE FROM ratings WHERE id = ?", (rating_id,))
+
+
 def get_all_rated_recipes():
     with get_conn() as conn:
         rows = conn.execute("""
-            SELECT r.id, r.title, r.cuisine, r.time_minutes, r.features,
+            SELECT rt.id as rating_id, r.id as recipe_id, r.title, r.cuisine, r.time_minutes, r.features,
                    rt.rating, rt.note, rt.created_at as rated_at
             FROM recipes r
             JOIN ratings rt ON rt.recipe_id = r.id
