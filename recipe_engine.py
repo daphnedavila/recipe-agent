@@ -82,10 +82,70 @@ Respond ONLY with valid JSON (no markdown fences, no preamble) matching exactly 
     return json.loads(text)
 
 
+# --- LLM-native preference approach: instead of a trained classifier, this
+# summarizes taste in plain language and asks the LLM directly to predict a
+# rating. Used in Week 4 to compare against the classifier's approach.
+
+def summarize_taste_profile(api_key: str, rated_recipes: list) -> str:
+    """
+    rated_recipes: list of dicts with at least {"title": str, "features": dict,
+                    "rating": int, "note": str (optional)}
+    Returns a short natural-language summary of the person's taste.
+    """
+    if not rated_recipes:
+        return "No ratings yet — no taste profile available."
+
+    client = anthropic.Anthropic(api_key=api_key)
+    lines = []
+    for r in rated_recipes:
+        note = r.get("note") or ""
+        lines.append(f"- {r['title']} | rating: {r['rating']}/5 | note: {note} | features: {r['features']}")
+
+    prompt = f"""Here is a history of recipes suggested to a user, with their ratings (1-5) and notes:
+
+{chr(10).join(lines)}
+
+In 3-4 sentences, summarize this person's food preferences: what they tend to like,
+what they tend to dislike, and any patterns in cuisine, spice level, cook time, or
+richness. Be specific and concise, written for use as context in a future prompt."""
+
+    resp = client.messages.create(
+        model=MODEL,
+        max_tokens=300,
+        messages=[{"role": "user", "content": prompt}],
+    )
+    return resp.content[0].text.strip()
+
+
+def predict_rating_llm(api_key: str, taste_summary: str, features: dict) -> float:
+    """
+    Asks the LLM directly to predict a 1-5 rating for a recipe (given its features)
+    based on a taste profile summary — the "LLM-native" alternative to the trained
+    classifier in classifier.py.
+    """
+    client = anthropic.Anthropic(api_key=api_key)
+
+    prompt = f"""A person's food preferences, based on their rating history:
+{taste_summary}
+
+Given these preferences, predict how much they would rate a NEW recipe with these features (1-5 scale):
+{json.dumps(features, indent=2)}
+
+Respond ONLY with a single number between 1 and 5 (can include one decimal, e.g. 3.5). No other text."""
+
+    resp = client.messages.create(
+        model=MODEL,
+        max_tokens=10,
+        messages=[{"role": "user", "content": prompt}],
+    )
+    text = resp.content[0].text.strip()
+    try:
+        return max(1.0, min(5.0, float(text)))
+    except ValueError:
+        return 3.0  # fallback if the model doesn't return a clean number
+
+
 if __name__ == "__main__":
-    # This block only runs when you execute this file directly
-    # (python recipe_engine.py) — not when app.py imports generate_recipe from it.
-    # Quick local test — run: python recipe_engine.py
     import os
     api_key = os.environ.get("ANTHROPIC_API_KEY")
     if not api_key:
