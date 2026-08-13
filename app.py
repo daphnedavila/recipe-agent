@@ -208,3 +208,20 @@ with st.expander("Your rating history"):
                 if st.button("Delete", key=f"delete_{item['rating_id']}"):
                     delete_rating(item['rating_id'], username)
                     st.rerun()
+
+# --- Account management (only visible once logged in) ---
+st.divider()
+with st.expander("Account settings"):
+    st.caption("Delete my account — this permanently removes your account and all your ratings.")
+    confirm_password = st.text_input("Re-enter your password to confirm", type="password", key="confirm_delete_password")
+    if st.button("Delete my account", type="secondary"):
+        if not confirm_password:
+            st.warning("Enter your password to confirm.")
+        else:
+            success, message = delete_user(username, confirm_password)
+            if success:
+                st.success(message)
+                st.session_state.username = None
+                st.rerun()
+            else:
+                st.error(message)
