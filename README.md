@@ -93,11 +93,3 @@ python eval.py <username>
 - **Small evaluation sample.** Results above are based on limited ratings from active development/testing. More data would sharpen the comparison between approaches.
 - **No verification of ingredient safety/availability** — recipes are generated, not sourced from a vetted database.
 
----
-
-## Possible next steps
-
-- Persistent hosted database (removes the reboot-wipes-data issue)
-- Larger-scale evaluation once more ratings accumulate
-- A third baseline (e.g. simple average-by-cuisine) for a fuller comparison
-- Export ratings/recipes as JSON for portability between accounts
