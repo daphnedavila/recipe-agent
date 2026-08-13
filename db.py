@@ -91,6 +91,12 @@ def create_user(username, password):
         return True, "User created."
 
 
+def user_exists(username):
+    with get_conn() as conn:
+        row = conn.execute("SELECT 1 FROM users WHERE username = ?", (username,)).fetchone()
+        return row is not None
+
+
 def list_usernames():
     with get_conn() as conn:
         rows = conn.execute("SELECT username FROM users ORDER BY username ASC").fetchall()

@@ -15,7 +15,7 @@ import streamlit as st
 from db import (
     init_db, save_recipe, save_rating, get_all_rated_recipes,
     check_and_increment_usage, delete_rating,
-    create_user, list_usernames, delete_user,
+    create_user, verify_password, delete_user, user_exists,
 )
 from recipe_engine import generate_recipe, extract_features
 from classifier import PreferenceModel, MIN_RATINGS_TO_TRAIN
@@ -47,58 +47,58 @@ if not API_KEY:
     )
     st.stop()
 
-# --- User selection: pick an existing user or add a new one. No password to use the app,
-# but deleting a user requires the password they set when created, so a random visitor
-# can't wipe someone else's data. ---
+# --- Login: username + password required, whether logging into an existing
+# account or creating a new one. No list of other users is ever shown. ---
 if "username" not in st.session_state:
     st.session_state.username = None
 
 if not st.session_state.username:
-    st.subheader("Who's cooking?")
+    st.subheader("Log in")
 
-    existing_users = list_usernames()
+    login_username = st.text_input("Username")
+    login_password = st.text_input("Password", type="password")
 
-    if existing_users:
-        choice = st.selectbox("Select a user", ["-- choose --"] + existing_users + ["+ Add new user"])
-    else:
-        choice = "+ Add new user"
-        st.caption("No users yet — create the first one below.")
+    col1, col2 = st.columns(2)
+    with col1:
+        log_in_clicked = st.button("Log in", type="primary")
+    with col2:
+        create_clicked = st.button("Create account")
 
-    if choice == "+ Add new user":
-        new_username = st.text_input("New username")
-        new_password = st.text_input("Set a password (only needed later to delete this user)", type="password")
-        if st.button("Create user"):
-            clean_name = re.sub(r"[^a-zA-Z0-9_-]", "", new_username.strip())[:30]
-            if not clean_name:
-                st.warning("Please use letters, numbers, - or _ only.")
-            elif not new_password:
-                st.warning("Please set a password.")
-            else:
-                success, message = create_user(clean_name, new_password)
-                if success:
-                    st.session_state.username = clean_name
-                    st.rerun()
-                else:
-                    st.error(message)
+    clean_name = re.sub(r"[^a-zA-Z0-9_-]", "", login_username.strip())[:30] if login_username else ""
 
-    elif choice != "-- choose --":
-        if st.button(f"Continue as {choice}"):
-            st.session_state.username = choice
+    if log_in_clicked:
+        if not clean_name or not login_password:
+            st.warning("Enter a username and password.")
+        elif not user_exists(clean_name):
+            st.error("No account with that username. Use 'Create account' if you're new.")
+        elif not verify_password(clean_name, login_password):
+            st.error("Incorrect password.")
+        else:
+            st.session_state.username = clean_name
             st.rerun()
 
-    with st.expander("Delete a user"):
-        if existing_users:
-            del_user = st.selectbox("User to delete", existing_users, key="del_user_select")
-            del_password = st.text_input("Password", type="password", key="del_user_password")
-            if st.button("Delete user", type="secondary"):
-                success, message = delete_user(del_user, del_password)
-                if success:
-                    st.success(message)
-                    st.rerun()
-                else:
-                    st.error(message)
+    if create_clicked:
+        if not clean_name or not login_password:
+            st.warning("Enter a username and password.")
         else:
-            st.caption("No users to delete yet.")
+            success, message = create_user(clean_name, login_password)
+            if success:
+                st.session_state.username = clean_name
+                st.rerun()
+            else:
+                st.error(message)
+
+    with st.expander("Delete my account"):
+        st.caption("This permanently deletes your account and all your ratings.")
+        del_username_input = st.text_input("Username", key="del_username")
+        del_password_input = st.text_input("Password", type="password", key="del_password")
+        if st.button("Delete my account", type="secondary"):
+            clean_del_name = re.sub(r"[^a-zA-Z0-9_-]", "", del_username_input.strip())[:30]
+            success, message = delete_user(clean_del_name, del_password_input)
+            if success:
+                st.success(message)
+            else:
+                st.error(message)
 
     st.stop()
 
