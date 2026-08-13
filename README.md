@@ -48,7 +48,7 @@ Both are evaluated the same way: **leave-one-out cross-validation**. For each ra
 
 ---
 
-## Results
+## Results (as of 8/13)
 
 On real rating data collected through the app, the learned model consistently outperformed the plain-language guess:
 
