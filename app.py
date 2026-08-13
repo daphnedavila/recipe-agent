@@ -17,8 +17,9 @@ from db import (
     check_and_increment_usage, delete_rating,
     create_user, verify_password, delete_user, user_exists,
 )
-from recipe_engine import generate_recipe, extract_features
+from recipe_engine import generate_recipe, extract_features, summarize_taste_profile, predict_rating_llm
 from classifier import PreferenceModel, MIN_RATINGS_TO_TRAIN
+import statistics
 
 st.set_page_config(page_title="Sous Agent", page_icon="🍳", layout="centered")
 
@@ -221,3 +222,58 @@ with st.expander("Account settings"):
                 st.rerun()
             else:
                 st.error(message)
+
+# --- Model evaluation: leave-one-out comparison of the classifier vs. an
+# LLM-native taste-summary approach, run directly on this account's real data. ---
+st.divider()
+with st.expander("📊 Evaluate prediction accuracy"):
+    st.caption(
+        "Runs a leave-one-out test: for each rated recipe, both approaches are "
+        "trained on your *other* ratings and asked to predict that one. Lower "
+        "Mean Absolute Error (MAE) = more accurate predictions, on a 1-5 star scale."
+    )
+    history_for_eval = get_all_rated_recipes(username)
+    st.caption(f"You have {len(history_for_eval)} rated recipes "
+               f"(need at least {MIN_RATINGS_TO_TRAIN + 1} to run this).")
+
+    if st.button("Run evaluation"):
+        if len(history_for_eval) < MIN_RATINGS_TO_TRAIN + 1:
+            st.warning(f"Rate at least {MIN_RATINGS_TO_TRAIN + 1} recipes first.")
+        else:
+            with st.spinner("Running leave-one-out evaluation (this calls the API multiple times, may take a minute)..."):
+                clf_errors = []
+                for i in range(len(history_for_eval)):
+                    held_out = history_for_eval[i]
+                    training_set = history_for_eval[:i] + history_for_eval[i + 1:]
+                    if len(training_set) < MIN_RATINGS_TO_TRAIN:
+                        continue
+                    model = PreferenceModel()
+                    if model.fit(training_set):
+                        predicted = model.predict(held_out["features"])
+                        clf_errors.append(abs(predicted - held_out["rating"]))
+
+                llm_errors = []
+                for i in range(len(history_for_eval)):
+                    held_out = history_for_eval[i]
+                    training_set = history_for_eval[:i] + history_for_eval[i + 1:]
+                    if len(training_set) < MIN_RATINGS_TO_TRAIN:
+                        continue
+                    summary = summarize_taste_profile(API_KEY, training_set)
+                    predicted = predict_rating_llm(API_KEY, summary, held_out["features"])
+                    llm_errors.append(abs(predicted - held_out["rating"]))
+
+            col1, col2 = st.columns(2)
+            with col1:
+                if clf_errors:
+                    st.metric("Classifier MAE", f"{statistics.mean(clf_errors):.2f}", help=f"n={len(clf_errors)} held-out predictions")
+                else:
+                    st.write("Not enough data.")
+            with col2:
+                if llm_errors:
+                    st.metric("LLM-native MAE", f"{statistics.mean(llm_errors):.2f}", help=f"n={len(llm_errors)} held-out predictions")
+                else:
+                    st.write("Not enough data.")
+
+            if clf_errors and llm_errors:
+                better = "Classifier" if statistics.mean(clf_errors) < statistics.mean(llm_errors) else "LLM-native"
+                st.info(f"**{better}** performed better on your data (lower MAE = more accurate).")
