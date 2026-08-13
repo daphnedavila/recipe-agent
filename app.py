@@ -88,18 +88,6 @@ if not st.session_state.username:
             else:
                 st.error(message)
 
-    with st.expander("Delete my account"):
-        st.caption("This permanently deletes your account and all your ratings.")
-        del_username_input = st.text_input("Username", key="del_username")
-        del_password_input = st.text_input("Password", type="password", key="del_password")
-        if st.button("Delete my account", type="secondary"):
-            clean_del_name = re.sub(r"[^a-zA-Z0-9_-]", "", del_username_input.strip())[:30]
-            success, message = delete_user(clean_del_name, del_password_input)
-            if success:
-                st.success(message)
-            else:
-                st.error(message)
-
     st.stop()
 
 username = st.session_state.username
