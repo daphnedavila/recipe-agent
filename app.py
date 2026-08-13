@@ -226,21 +226,21 @@ with st.expander("Account settings"):
 # --- Model evaluation: leave-one-out comparison of the classifier vs. an
 # LLM-native taste-summary approach, run directly on this account's real data. ---
 st.divider()
-with st.expander("📊 Evaluate prediction accuracy"):
+with st.expander("📊 How well does it know your taste?"):
     st.caption(
-        "Runs a leave-one-out test: for each rated recipe, both approaches are "
-        "trained on your *other* ratings and asked to predict that one. Lower "
-        "Mean Absolute Error (MAE) = more accurate predictions, on a 1-5 star scale."
+        "This tests the app's predictions against your real ratings: for each recipe "
+        "you've rated, it hides that rating, re-predicts it using only your *other* "
+        "ratings, then checks how close the guess was — like a pop quiz using your own history."
     )
     history_for_eval = get_all_rated_recipes(username)
     st.caption(f"You have {len(history_for_eval)} rated recipes "
                f"(need at least {MIN_RATINGS_TO_TRAIN + 1} to run this).")
 
-    if st.button("Run evaluation"):
+    if st.button("Run the test"):
         if len(history_for_eval) < MIN_RATINGS_TO_TRAIN + 1:
             st.warning(f"Rate at least {MIN_RATINGS_TO_TRAIN + 1} recipes first.")
         else:
-            with st.spinner("Running leave-one-out evaluation (this calls the API multiple times, may take a minute)..."):
+            with st.spinner("Testing predictions against your rating history (may take a minute)..."):
                 clf_errors = []
                 for i in range(len(history_for_eval)):
                     held_out = history_for_eval[i]
@@ -262,18 +262,34 @@ with st.expander("📊 Evaluate prediction accuracy"):
                     predicted = predict_rating_llm(API_KEY, summary, held_out["features"])
                     llm_errors.append(abs(predicted - held_out["rating"]))
 
+            st.write("")
             col1, col2 = st.columns(2)
             with col1:
+                st.markdown("**🧠 Learned model**")
                 if clf_errors:
-                    st.metric("Classifier MAE", f"{statistics.mean(clf_errors):.2f}", help=f"n={len(clf_errors)} held-out predictions")
+                    st.metric("Average miss", f"{statistics.mean(clf_errors):.1f} stars", label_visibility="visible")
+                    st.caption(f"Based on {len(clf_errors)} test predictions")
                 else:
-                    st.write("Not enough data.")
+                    st.write("Not enough data yet.")
             with col2:
+                st.markdown("**💬 Plain-language guess**")
                 if llm_errors:
-                    st.metric("LLM-native MAE", f"{statistics.mean(llm_errors):.2f}", help=f"n={len(llm_errors)} held-out predictions")
+                    st.metric("Average miss", f"{statistics.mean(llm_errors):.1f} stars", label_visibility="visible")
+                    st.caption(f"Based on {len(llm_errors)} test predictions")
                 else:
-                    st.write("Not enough data.")
+                    st.write("Not enough data yet.")
 
             if clf_errors and llm_errors:
-                better = "Classifier" if statistics.mean(clf_errors) < statistics.mean(llm_errors) else "LLM-native"
-                st.info(f"**{better}** performed better on your data (lower MAE = more accurate).")
+                clf_avg = statistics.mean(clf_errors)
+                llm_avg = statistics.mean(llm_errors)
+                better = "learned model" if clf_avg < llm_avg else "plain-language guess"
+                st.success(
+                    f"The **{better}** was more accurate — it predicted your ratings "
+                    f"closer to what you actually gave, on average."
+                )
+                st.caption(
+                    "'Learned model' looks at patterns in things like cuisine, spice level, "
+                    "and cook time from your past ratings. 'Plain-language guess' just "
+                    "summarizes your taste in a sentence and has the AI guess directly. "
+                    "Smaller 'average miss' = better predictions."
+                )
