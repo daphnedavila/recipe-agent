@@ -2,7 +2,7 @@
 
 A kitchen helper that thinks about your next meal so you don't have to. Sous Agent generates recipe suggestions with Claude, learns your taste from your ratings, and predicts how much you'll like new recipes before you even cook them.
 
-**Live app:** [cooking-agent.streamlit.app](https://cooking-agent.streamlit.app) *(update with your actual URL)*
+**Live app:** [sous-agent.streamlit.app](https://sous-agent.streamlit.app/)
 
 ---
 
