@@ -179,7 +179,7 @@ def check_and_increment_usage(username, daily_limit):
 def get_all_rated_recipes(username):
     with get_conn() as conn:
         rows = conn.execute("""
-            SELECT rt.id as rating_id, r.id as recipe_id, r.title, r.cuisine, r.time_minutes, r.features,
+            SELECT rt.id as rating_id, r.id as recipe_id, r.title, r.recipe_text, r.cuisine, r.time_minutes, r.features,
                    rt.rating, rt.note, rt.created_at as rated_at
             FROM recipes r
             JOIN ratings rt ON rt.recipe_id = r.id

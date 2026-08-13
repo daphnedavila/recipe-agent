@@ -188,14 +188,22 @@ with st.expander("Your rating history"):
         st.write("No ratings yet.")
     else:
         for item in history:
+            st.write(f"**{item['title']}** — {item['rating']}/5"
+                      + (f" _{item['note']}_" if item['note'] else ""))
             col1, col2 = st.columns([5, 1])
             with col1:
-                st.write(f"**{item['title']}** — {item['rating']}/5"
-                          + (f" _{item['note']}_" if item['note'] else ""))
+                view_key = f"view_{item['rating_id']}"
+                if view_key not in st.session_state:
+                    st.session_state[view_key] = False
+                if st.button("View recipe", key=f"view_btn_{item['rating_id']}"):
+                    st.session_state[view_key] = not st.session_state[view_key]
+                if st.session_state[view_key]:
+                    st.markdown(item['recipe_text'])
             with col2:
                 if st.button("Delete", key=f"delete_{item['rating_id']}"):
                     delete_rating(item['rating_id'], username)
                     st.rerun()
+            st.divider()
 
 # --- Account management (only visible once logged in) ---
 st.divider()
