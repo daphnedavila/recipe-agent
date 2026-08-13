@@ -7,6 +7,8 @@ can use the same app without their data or predictions mixing.
 
 import sqlite3
 import json
+import hashlib
+import secrets
 from datetime import datetime, timezone
 from contextlib import contextmanager
 
@@ -58,6 +60,62 @@ def init_db():
                 PRIMARY KEY (username, day)
             )
         """)
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS users (
+                username TEXT PRIMARY KEY,
+                password_hash TEXT NOT NULL,
+                salt TEXT NOT NULL,
+                created_at TEXT NOT NULL
+            )
+        """)
+
+
+# --- User management ---
+
+def _hash_password(password, salt):
+    return hashlib.sha256((salt + password).encode()).hexdigest()
+
+
+def create_user(username, password):
+    """Returns (success: bool, message: str)."""
+    with get_conn() as conn:
+        existing = conn.execute("SELECT 1 FROM users WHERE username = ?", (username,)).fetchone()
+        if existing:
+            return False, "That username is already taken."
+        salt = secrets.token_hex(8)
+        password_hash = _hash_password(password, salt)
+        conn.execute(
+            "INSERT INTO users (username, password_hash, salt, created_at) VALUES (?, ?, ?, ?)",
+            (username, password_hash, salt, datetime.now(timezone.utc).isoformat()),
+        )
+        return True, "User created."
+
+
+def list_usernames():
+    with get_conn() as conn:
+        rows = conn.execute("SELECT username FROM users ORDER BY username ASC").fetchall()
+        return [row["username"] for row in rows]
+
+
+def verify_password(username, password):
+    with get_conn() as conn:
+        row = conn.execute("SELECT password_hash, salt FROM users WHERE username = ?", (username,)).fetchone()
+        if not row:
+            return False
+        return _hash_password(password, row["salt"]) == row["password_hash"]
+
+
+def delete_user(username, password):
+    """Deletes a user and all their recipes/ratings/usage, only if password is correct.
+    Returns (success: bool, message: str)."""
+    if not verify_password(username, password):
+        return False, "Incorrect password."
+    with get_conn() as conn:
+        conn.execute("DELETE FROM ratings WHERE username = ?", (username,))
+        conn.execute("DELETE FROM recipes WHERE username = ?", (username,))
+        conn.execute("DELETE FROM usage WHERE username = ?", (username,))
+        conn.execute("DELETE FROM users WHERE username = ?", (username,))
+        return True, "User deleted."
 
 
 def save_recipe(username, title, recipe_text, cuisine, time_minutes, ingredients_on_hand, features=None):
