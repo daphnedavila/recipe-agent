@@ -20,7 +20,7 @@ from db import (
 from recipe_engine import generate_recipe, extract_features
 from classifier import PreferenceModel, MIN_RATINGS_TO_TRAIN
 
-st.set_page_config(page_title="Palate Agent", page_icon="🍳", layout="centered")
+st.set_page_config(page_title="Cooking Agent", page_icon="🍳", layout="centered")
 
 init_db()
 
@@ -37,7 +37,7 @@ def get_api_key():
 
 API_KEY = get_api_key()
 
-st.title("🍳 Palate Agent")
+st.title("🍳 Cooking Agent")
 st.caption("An agent that learns your food preferences over time.")
 
 if not API_KEY:
