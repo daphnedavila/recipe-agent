@@ -1,8 +1,8 @@
 # 🍳 Sous Agent
 
-A kitchen helper that thinks about your next meal so you don't have to. Sous Agent generates recipe suggestions with Claude, learns your taste from your ratings, and predicts how much you'll like new recipes before you even cook them.
+A kitchen helper that thinks about your next meal so you don't have to. Sous Agent generates recipe suggestions, learns your taste from your ratings, and predicts how much you'll like new recipes before you even cook them.
 
-**Live app:** [sous-agent.streamlit.app](https://sous-agent.streamlit.app)
+**Live app:** [sous-agent.streamlit.app](https://sous-agent.streamlit.app/)
 
 ---
 
@@ -48,7 +48,7 @@ Both are evaluated the same way: **leave-one-out cross-validation**. For each ra
 
 ---
 
-## Results
+## Results (as of 8/13)
 
 On real rating data collected through the app, the learned model consistently outperformed the plain-language guess:
 
@@ -93,11 +93,3 @@ python eval.py <username>
 - **Small evaluation sample.** Results above are based on limited ratings from active development/testing. More data would sharpen the comparison between approaches.
 - **No verification of ingredient safety/availability** — recipes are generated, not sourced from a vetted database.
 
----
-
-## Possible next steps
-
-- Persistent hosted database (removes the reboot-wipes-data issue)
-- Larger-scale evaluation once more ratings accumulate
-- A third baseline (e.g. simple average-by-cuisine) for a fuller comparison
-- Export ratings/recipes as JSON for portability between accounts
