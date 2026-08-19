@@ -57,7 +57,7 @@ On real rating data collected through the app, the learned model consistently ou
 | Learned model | 0.8 |
 | Plain-language guess | 1.2 |
 
-**Takeaway:** turning preferences into structured features and training a small model on them captures taste patterns more reliably than describing preferences in a sentence and asking an LLM to judge directly — a useful reminder that structure + a simple model can beat a more "AI-native"-sounding approach for a well-defined prediction task.
+**Takeaway:** turning preferences into structured features and training a small model on them captures taste patterns more reliably than describing preferences in a sentence and asking an LLM to judge directly.
 
 *Caveat: this result is based on one person's rating history at modest scale. It's a directional finding, not a claim that would generalize to arbitrary users or larger datasets without further testing.*
 
