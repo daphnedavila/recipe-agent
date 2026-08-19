@@ -1,8 +1,8 @@
 # 🍳 Sous Agent
 
-A kitchen helper that thinks about your next meal so you don't have to. Sous Agent generates recipe suggestions, learns your taste from your ratings, and predicts how much you'll like new recipes before you even cook them.
+A kitchen helper that thinks about your next meal so you don't have to. Sous Agent generates recipe suggestions with Claude, learns your taste from your ratings, and predicts how much you'll like new recipes before you even cook them.
 
-**Live app:** [sous-agent.streamlit.app](https://sous-agent.streamlit.app/)
+**Live app:** [sous-agent.streamlit.app](https://sous-agent.streamlit.app)
 
 ---
 
@@ -48,16 +48,16 @@ Both are evaluated the same way: **leave-one-out cross-validation**. For each ra
 
 ---
 
-## Results (as of 8/13)
+## Results
 
 On real rating data collected through the app, the learned model consistently outperformed the plain-language guess:
 
 | Approach | Mean Absolute Error (stars) |
 |---|---|
-| Learned model | ~0.8 |
-| Plain-language guess | ~1.1 |
+| Learned model | 0.8 |
+| Plain-language guess | 1.2 |
 
-**Takeaway:** turning preferences into structured features and training a small model on them captures taste patterns more reliably than describing preferences in a sentence and asking an LLM to judge directly. This held even with a fairly small dataset (well under 30 ratings) — a useful reminder that structure + a simple model can beat a more "AI-native"-sounding approach for a well-defined prediction task.
+**Takeaway:** turning preferences into structured features and training a small model on them captures taste patterns more reliably than describing preferences in a sentence and asking an LLM to judge directly — a useful reminder that structure + a simple model can beat a more "AI-native"-sounding approach for a well-defined prediction task.
 
 *Caveat: this result is based on one person's rating history at modest scale. It's a directional finding, not a claim that would generalize to arbitrary users or larger datasets without further testing.*
 
@@ -93,3 +93,11 @@ python eval.py <username>
 - **Small evaluation sample.** Results above are based on limited ratings from active development/testing. More data would sharpen the comparison between approaches.
 - **No verification of ingredient safety/availability** — recipes are generated, not sourced from a vetted database.
 
+---
+
+## Possible next steps
+
+- Persistent hosted database (removes the reboot-wipes-data issue)
+- Larger-scale evaluation once more ratings accumulate
+- A third baseline (e.g. simple average-by-cuisine) for a fuller comparison
+- Export ratings/recipes as JSON for portability between accounts
